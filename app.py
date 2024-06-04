@@ -186,13 +186,19 @@ fig7.update_layout(
 
 # Mostrar os gráficos no Streamlit
 if ano_selecionado != 'All':
-    st.plotly_chart(fig1)
-    st.plotly_chart(fig2)
-    st.plotly_chart(fig3)
-    st.plotly_chart(fig4)
-    st.plotly_chart(fig5)
-    st.plotly_chart(fig6)
-    st.plotly_chart(fig7)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig3, use_container_width=True)
+        st.plotly_chart(fig5, use_container_width=True)
+        
+    with col2:
+        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig4, use_container_width=True)
+        st.plotly_chart(fig6, use_container_width=True)
+    
+    st.plotly_chart(fig7, use_container_width=True)
 
 # Calcular a média de todos os chamados
 media_total_chamados = sedec_chamados.groupby('ano').size().mean()
@@ -214,16 +220,16 @@ anos_projecao = list(anos_futuros)
 chamados_projecao = projecao_chamados
 
 # Criar o gráfico
-fig = go.Figure()
+fig_proj = go.Figure()
 
 # Adicionar os dados do histórico
-fig.add_trace(go.Scatter(x=anos_hist, y=chamados_hist, mode='lines+markers', name='Chamados por ano'))
+fig_proj.add_trace(go.Scatter(x=anos_hist, y=chamados_hist, mode='lines+markers', name='Chamados por ano'))
 
 # Adicionar os dados da projeção como uma linha mais suave
-fig.add_trace(go.Scatter(x=anos_projecao, y=chamados_projecao, mode='lines', line=dict(dash='dash', color='rgba(255, 255, 0, 0.8)'), name='Projeção para os próximos anos'))
+fig_proj.add_trace(go.Scatter(x=anos_projecao, y=chamados_projecao, mode='lines', line=dict(dash='dash', color='rgba(255, 255, 0, 0.8)'), name='Projeção para os próximos anos'))
 
 # Atualizar o layout
-fig.update_layout(
+fig_proj.update_layout(
     title='Projeção de Chamados para os Próximos Anos',
     xaxis_title='Ano',
     yaxis_title='Número de Chamados',
@@ -231,4 +237,13 @@ fig.update_layout(
 )
 
 # Exibir o gráfico no Streamlit
-st.plotly_chart(fig)
+st.plotly_chart(fig_proj, use_container_width=True)
+
+# Mostrar o mapa e gráficos juntos
+st.header("Mapa Interativo e Análise de Chamados")
+st.subheader("Mapa de Chamados por RPA e Bairros")
+
+# Adicionar uma breve descrição ou instruções
+st.write("""
+Explore o mapa interativo para visualizar a distribuição dos chamados por RPA e bairros. Use os gráficos abaixo para obter insights detalhados sobre os chamados ao longo do tempo e outras características relevantes.
+""")
