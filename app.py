@@ -42,6 +42,15 @@ def filter_and_group_data_by_year(year):
     chamados_por_origem = filtered_data['solicitacao_origem_chamado'].value_counts()
     return chamados_por_rpa, chamados_por_data, chamados_por_bairro, chamados_por_situacao, chamados_por_vitimas, chamados_por_vitimas_fatais, chamados_por_origem
 
+# Mostrar o mapa e gráficos juntos
+st.header("Mapa Interativo e Análise de Chamados")
+st.subheader("Mapa de Chamados por RPA e Bairros")
+
+# Adicionar uma breve descrição ou instruções
+st.write("""
+Explore o mapa interativo para visualizar a distribuição dos chamados por RPA e bairros. Use os gráficos abaixo para obter insights detalhados sobre os chamados ao longo do tempo e outras características relevantes.
+""")
+
 # Seleção de ano
 ano_selecionado = st.selectbox("Selecione o ano:", anos_disponiveis)
 
@@ -239,11 +248,3 @@ fig_proj.update_layout(
 # Exibir o gráfico no Streamlit
 st.plotly_chart(fig_proj, use_container_width=True)
 
-# Mostrar o mapa e gráficos juntos
-st.header("Mapa Interativo e Análise de Chamados")
-st.subheader("Mapa de Chamados por RPA e Bairros")
-
-# Adicionar uma breve descrição ou instruções
-st.write("""
-Explore o mapa interativo para visualizar a distribuição dos chamados por RPA e bairros. Use os gráficos abaixo para obter insights detalhados sobre os chamados ao longo do tempo e outras características relevantes.
-""")
