@@ -37,7 +37,10 @@ def filter_and_group_data_by_year(year):
     chamados_por_data = filtered_data.groupby(filtered_data['solicitacao_data'].dt.date).size().reset_index(name='count')
     chamados_por_bairro = filtered_data['solicitacao_bairro'].value_counts().head(10)
     chamados_por_situacao = filtered_data['processo_situacao'].value_counts()
-    return chamados_por_rpa, chamados_por_data, chamados_por_bairro, chamados_por_situacao
+    chamados_por_vitimas = filtered_data[filtered_data['solicitacao_vitimas'] == 'Sim'].groupby(filtered_data['solicitacao_data'].dt.date).size().reset_index(name='count')
+    chamados_por_vitimas_fatais = filtered_data[filtered_data['solicitacao_vitimas_fatais'] == 'Sim'].groupby(filtered_data['solicitacao_data'].dt.date).size().reset_index(name='count')
+    chamados_por_origem = filtered_data['solicitacao_origem_chamado'].value_counts()
+    return chamados_por_rpa, chamados_por_data, chamados_por_bairro, chamados_por_situacao, chamados_por_vitimas, chamados_por_vitimas_fatais, chamados_por_origem
 
 # Seleção de ano
 ano_selecionado = st.selectbox("Selecione o ano:", anos_disponiveis)
@@ -113,20 +116,6 @@ folium.LayerControl(collapsed=False, overlay=True).add_to(m)
 # Mostrar o mapa no Streamlit
 st_folium(m, width=700, height=500)
 
-
-# Função para filtrar e agrupar os dados por ano
-def filter_and_group_data_by_year(year):
-    filtered_data = sedec_chamados[sedec_chamados['ano'] == year]
-    chamados_por_rpa = filtered_data['rpa_codigo'].value_counts().sort_index()
-    chamados_por_data = filtered_data.groupby(filtered_data['solicitacao_data'].dt.date).size().reset_index(name='count')
-    chamados_por_bairro = filtered_data['solicitacao_bairro'].value_counts().head(10)
-    chamados_por_situacao = filtered_data['processo_situacao'].value_counts()
-    return chamados_por_rpa, chamados_por_data, chamados_por_bairro, chamados_por_situacao
-
-# Inicializar dados para o primeiro ano presente nos dados
-ano_inicial = anos_disponiveis[1] if anos_disponiveis[0] == 'All' else anos_disponiveis[0]
-dados_iniciais = filter_and_group_data_by_year(ano_inicial) if ano_inicial != 'All' else filter_and_group_data_by_year(anos_disponiveis[1])
-
 # Gráfico 1: Contagem de Chamados por RPA
 fig1 = go.Figure(data=[
     go.Bar(x=dados_atualizados[0].index, y=dados_atualizados[0].values, marker=dict(color=dados_atualizados[0].values, colorscale='Viridis'))
@@ -151,8 +140,6 @@ fig2.update_layout(
 fig3 = go.Figure(data=[
     go.Bar(x=dados_atualizados[2].index, y=dados_atualizados[2].values, marker=dict(color=dados_atualizados[2].values, colorscale='Viridis'))
 ])
-
-
 fig3.update_layout(
     title="Contagem de Chamados por Bairro",
     xaxis_title="Bairro",
@@ -167,12 +154,45 @@ fig4.update_layout(
     title="Contagem de Chamados por Situação do Processo"
 )
 
+# Gráfico 5: Número de Chamados com Vítimas ao Longo do Tempo
+fig5 = go.Figure(data=[
+    go.Scatter(x=dados_atualizados[4]['solicitacao_data'], y=dados_atualizados[4]['count'], mode='lines')
+])
+fig5.update_layout(
+    title="Número de Chamados com Vítimas ao Longo do Tempo",
+    xaxis_title="Data",
+    yaxis_title="Número de Chamados com Vítimas"
+)
+
+# Gráfico 6: Número de Chamados com Vítimas Fatais ao Longo do Tempo
+fig6 = go.Figure(data=[
+    go.Scatter(x=dados_atualizados[5]['solicitacao_data'], y=dados_atualizados[5]['count'], mode='lines')
+])
+fig6.update_layout(
+    title="Número de Chamados com Vítimas Fatais ao Longo do Tempo",
+    xaxis_title="Data",
+    yaxis_title="Número de Chamados com Vítimas Fatais"
+)
+
+# Gráfico 7: Contagem de Chamados por Origem do Chamado
+fig7 = go.Figure(data=[
+    go.Bar(x=dados_atualizados[6].index, y=dados_atualizados[6].values, marker=dict(color=dados_atualizados[6].values, colorscale='Viridis'))
+])
+fig7.update_layout(
+    title="Contagem de Chamados por Origem do Chamado",
+    xaxis_title="Origem do Chamado",
+    yaxis_title="Número de Chamados"
+)
+
 # Mostrar os gráficos no Streamlit
 if ano_selecionado != 'All':
     st.plotly_chart(fig1)
     st.plotly_chart(fig2)
     st.plotly_chart(fig3)
     st.plotly_chart(fig4)
+    st.plotly_chart(fig5)
+    st.plotly_chart(fig6)
+    st.plotly_chart(fig7)
 
 # Calcular a média de todos os chamados
 media_total_chamados = sedec_chamados.groupby('ano').size().mean()
@@ -212,4 +232,3 @@ fig.update_layout(
 
 # Exibir o gráfico no Streamlit
 st.plotly_chart(fig)
-
