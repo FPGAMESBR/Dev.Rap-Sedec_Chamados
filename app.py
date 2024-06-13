@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import json
 import pandas as pd
 from streamlit_folium import st_folium
+import seaborn as sns
+
 
 # Carregar o arquivo GeoJSON
 with open('rpa.geojson') as f:
@@ -209,6 +211,94 @@ if ano_selecionado != 'All':
     
     st.plotly_chart(fig7, use_container_width=True)
 
+
+    # Novos gráficos interativos para a visão "All"
+if ano_selecionado == 'All':
+    # Distribuição de Chamados por Mês ao Longo dos Anos
+    sedec_chamados['mes'] = sedec_chamados['solicitacao_data'].dt.month
+    chamados_por_mes = sedec_chamados.groupby('mes').size().reset_index(name='count')
+    
+    fig8 = go.Figure(data=[
+        go.Bar(x=chamados_por_mes['mes'], y=chamados_por_mes['count'], marker=dict(color=chamados_por_mes['count'], colorscale='Viridis'))
+    ])
+    fig8.update_layout(
+        title="Distribuição de Chamados por Mês",
+        xaxis_title="Mês",
+        yaxis_title="Número de Chamados"
+    )
+    st.plotly_chart(fig8)
+    
+    # Chamados por Dia da Semana
+    sedec_chamados['dia_semana'] = sedec_chamados['solicitacao_data'].dt.dayofweek
+    chamados_por_dia_semana = sedec_chamados.groupby('dia_semana').size().reset_index(name='count')
+    
+    fig9 = go.Figure(data=[
+        go.Bar(x=chamados_por_dia_semana['dia_semana'], y=chamados_por_dia_semana['count'], marker=dict(color=chamados_por_dia_semana['count'], colorscale='Viridis'))
+    ])
+    fig9.update_layout(
+        title="Distribuição de Chamados por Dia da Semana",
+        xaxis_title="Dia da Semana",
+        yaxis_title="Número de Chamados",
+        xaxis=dict(
+            tickmode='array',
+            tickvals=[0, 1, 2, 3, 4, 5, 6],
+            ticktext=['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
+        )
+    )
+    st.plotly_chart(fig9)
+
+    # Função para limpar e converter a hora
+    def extrair_hora(valor):
+        try:
+            hora_limpa = valor.split(':')[0]  # Extrair apenas a hora
+            return int(hora_limpa)  # Converter para inteiro
+        except ValueError:
+            return None  # Retornar None se não for possível converter
+
+    # Aplicar a função para limpar e converter a hora
+    sedec_chamados['hora'] = sedec_chamados['solicitacao_hora'].apply(extrair_hora)
+
+    # Remover linhas onde não foi possível converter a hora
+    sedec_chamados = sedec_chamados.dropna(subset=['hora'])
+
+    # Criar DataFrame com todas as horas de 0 a 23 e inicializar a contagem em zero
+    todas_horas = pd.DataFrame({'hora': range(0, 24)})
+
+    # Agrupar e contar os chamados por hora
+    chamados_por_hora = sedec_chamados.groupby('hora').size().reset_index(name='count')
+
+    # Mesclar com todas as horas para garantir que todas as horas estejam representadas
+    chamados_por_hora = todas_horas.merge(chamados_por_hora, on='hora', how='left')
+
+    # Preencher horas sem chamados com zero
+    chamados_por_hora['count'] = chamados_por_hora['count'].fillna(0)
+
+    # Ordenar as horas crescentemente
+    chamados_por_hora = chamados_por_hora.sort_values(by='hora')
+
+    # Streamlit - Adicionar um slider para seleção de horas
+    hora_minima = chamados_por_hora['hora'].min()
+    hora_maxima = chamados_por_hora['hora'].max()
+
+    hora_selecionada = st.slider('Selecione a Hora:', hora_minima, hora_maxima, (hora_minima, hora_maxima))
+
+    # Filtrar o DataFrame baseado na seleção do usuário
+    chamados_filtrados = chamados_por_hora[(chamados_por_hora['hora'] >= hora_selecionada[0]) & 
+                                        (chamados_por_hora['hora'] <= hora_selecionada[1])]
+
+    # Criar o gráfico interativo com Plotly
+    fig10 = go.Figure(data=[
+        go.Bar(x=chamados_filtrados['hora'], y=chamados_filtrados['count'], 
+            marker=dict(color=chamados_filtrados['count'], colorscale='Viridis'))
+    ])
+    fig10.update_layout(
+        title="Distribuição de Chamados por Hora do Dia",
+        xaxis_title="Hora do Dia",
+        yaxis_title="Número de Chamados",
+        xaxis=dict(tickmode='linear')  # Configuração para garantir que todas as horas sejam exibidas
+    )
+    st.plotly_chart(fig10)
+
 # Calcular a média de todos os chamados
 media_total_chamados = sedec_chamados.groupby('ano').size().mean()
 
@@ -247,4 +337,6 @@ fig_proj.update_layout(
 
 # Exibir o gráfico no Streamlit
 st.plotly_chart(fig_proj, use_container_width=True)
+
+
 
