@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import json
 import pandas as pd
 from streamlit_folium import st_folium
-import seaborn as sns
+
 
 
 # Carregar o arquivo GeoJSON
