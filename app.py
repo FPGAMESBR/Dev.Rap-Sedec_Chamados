@@ -7,8 +7,6 @@ import json
 import pandas as pd
 from streamlit_folium import st_folium
 
-
-
 # Carregar o arquivo GeoJSON
 with open('rpa.geojson') as f:
     rpa_geojson = json.load(f)
@@ -34,7 +32,7 @@ st.title("Análise de Chamados por Ano e Mapa Interativo")
 
 # Função para filtrar e agrupar os dados por ano
 def filter_and_group_data_by_year(year):
-    filtered_data = sedec_chamados[sedec_chamados['ano'] == year]
+    filtered_data = sedec_chamados if year == 'All' else sedec_chamados[sedec_chamados['ano'] == year]
     chamados_por_rpa = filtered_data['rpa_codigo'].value_counts().sort_index()
     chamados_por_data = filtered_data.groupby(filtered_data['solicitacao_data'].dt.date).size().reset_index(name='count')
     chamados_por_bairro = filtered_data['solicitacao_bairro'].value_counts().head(10)
@@ -60,10 +58,7 @@ ano_selecionado = st.selectbox("Selecione o ano:", anos_disponiveis)
 dados_atualizados = filter_and_group_data_by_year(ano_selecionado)
 
 # Filtrar os dados conforme o ano selecionado
-if ano_selecionado == 'All':
-    chamados_filtrados = sedec_chamados
-else:
-    chamados_filtrados = sedec_chamados[sedec_chamados['ano'] == int(ano_selecionado)]
+chamados_filtrados = sedec_chamados if ano_selecionado == 'All' else sedec_chamados[sedec_chamados['ano'] == int(ano_selecionado)]
 
 # Agrupar os chamados por RPA e contar a quantidade em cada região
 chamados_grouped = chamados_filtrados.groupby('rpa_codigo').size().reset_index(name='chamados_count')
@@ -165,139 +160,112 @@ fig4.update_layout(
     title="Contagem de Chamados por Situação do Processo"
 )
 
-# Gráfico 5: Número de Chamados com Vítimas ao Longo do Tempo
-fig5 = go.Figure(data=[
-    go.Scatter(x=dados_atualizados[4]['solicitacao_data'], y=dados_atualizados[4]['count'], mode='lines')
-])
-fig5.update_layout(
-    title="Número de Chamados com Vítimas ao Longo do Tempo",
-    xaxis_title="Data",
-    yaxis_title="Número de Chamados com Vítimas"
-)
+# Mostrar os gráficos no Streamlit
+st.plotly_chart(fig1)
+st.plotly_chart(fig2)
+st.plotly_chart(fig3)
+st.plotly_chart(fig4)
 
-# Gráfico 6: Número de Chamados com Vítimas Fatais ao Longo do Tempo
-fig6 = go.Figure(data=[
-    go.Scatter(x=dados_atualizados[5]['solicitacao_data'], y=dados_atualizados[5]['count'], mode='lines')
-])
-fig6.update_layout(
-    title="Número de Chamados com Vítimas Fatais ao Longo do Tempo",
-    xaxis_title="Data",
-    yaxis_title="Número de Chamados com Vítimas Fatais"
-)
 
-# Gráfico 7: Contagem de Chamados por Origem do Chamado
-fig7 = go.Figure(data=[
-    go.Bar(x=dados_atualizados[6].index, y=dados_atualizados[6].values, marker=dict(color=dados_atualizados[6].values, colorscale='Viridis'))
+
+# Distribuição de Chamados por Mês ao Longo dos Anos
+if ano_selecionado == 'All':
+    chamados_por_mes = sedec_chamados.groupby(sedec_chamados['solicitacao_data'].dt.month).size().reset_index(name='count')
+else:
+    chamados_por_mes = sedec_chamados[sedec_chamados['ano'] == int(ano_selecionado)].groupby(sedec_chamados['solicitacao_data'].dt.month).size().reset_index(name='count')
+
+fig8 = go.Figure(data=[
+    go.Bar(x=chamados_por_mes['solicitacao_data'], y=chamados_por_mes['count'], marker=dict(color=chamados_por_mes['count'], colorscale='Viridis'))
 ])
-fig7.update_layout(
-    title="Contagem de Chamados por Origem do Chamado",
-    xaxis_title="Origem do Chamado",
+fig8.update_layout(
+    title="Distribuição de Chamados por Mês",
+    xaxis_title="Mês",
     yaxis_title="Número de Chamados"
 )
+st.plotly_chart(fig8)
 
-# Mostrar os gráficos no Streamlit
-if ano_selecionado != 'All':
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.plotly_chart(fig1, use_container_width=True)
-        st.plotly_chart(fig3, use_container_width=True)
-        st.plotly_chart(fig5, use_container_width=True)
-        
-    with col2:
-        st.plotly_chart(fig2, use_container_width=True)
-        st.plotly_chart(fig4, use_container_width=True)
-        st.plotly_chart(fig6, use_container_width=True)
-    
-    st.plotly_chart(fig7, use_container_width=True)
-
-
-    # Novos gráficos interativos para a visão "All"
+# Filtrar os dados conforme o ano selecionado
 if ano_selecionado == 'All':
-    # Distribuição de Chamados por Mês ao Longo dos Anos
-    sedec_chamados['mes'] = sedec_chamados['solicitacao_data'].dt.month
-    chamados_por_mes = sedec_chamados.groupby('mes').size().reset_index(name='count')
-    
-    fig8 = go.Figure(data=[
-        go.Bar(x=chamados_por_mes['mes'], y=chamados_por_mes['count'], marker=dict(color=chamados_por_mes['count'], colorscale='Viridis'))
-    ])
-    fig8.update_layout(
-        title="Distribuição de Chamados por Mês",
-        xaxis_title="Mês",
-        yaxis_title="Número de Chamados"
+    chamados_por_dia_semana = sedec_chamados.groupby(sedec_chamados['solicitacao_data'].dt.dayofweek).size().reset_index(name='count')
+else:
+    chamados_por_dia_semana = sedec_chamados[sedec_chamados['ano'] == int(ano_selecionado)].groupby(sedec_chamados['solicitacao_data'].dt.dayofweek).size().reset_index(name='count')
+
+# Mapear o número do dia da semana para o nome completo
+nome_dia_semana = {0: 'Segunda', 1: 'Terça', 2: 'Quarta', 3: 'Quinta', 4: 'Sexta', 5: 'Sábado', 6: 'Domingo'}
+chamados_por_dia_semana['dia_semana'] = chamados_por_dia_semana['solicitacao_data'].map(nome_dia_semana)
+
+fig9 = go.Figure(data=[
+    go.Bar(x=chamados_por_dia_semana['dia_semana'], y=chamados_por_dia_semana['count'], marker=dict(color=chamados_por_dia_semana['count'], colorscale='Viridis'))
+])
+fig9.update_layout(
+    title="Distribuição de Chamados por Dia da Semana",
+    xaxis_title="Dia da Semana",
+    yaxis_title="Número de Chamados",
+    xaxis=dict(
+        tickmode='array',
+        tickvals=[0, 1, 2, 3, 4, 5, 6],
+        ticktext=['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
     )
-    st.plotly_chart(fig8)
-    
-    # Chamados por Dia da Semana
-    sedec_chamados['dia_semana'] = sedec_chamados['solicitacao_data'].dt.dayofweek
-    chamados_por_dia_semana = sedec_chamados.groupby('dia_semana').size().reset_index(name='count')
-    
-    fig9 = go.Figure(data=[
-        go.Bar(x=chamados_por_dia_semana['dia_semana'], y=chamados_por_dia_semana['count'], marker=dict(color=chamados_por_dia_semana['count'], colorscale='Viridis'))
-    ])
-    fig9.update_layout(
-        title="Distribuição de Chamados por Dia da Semana",
-        xaxis_title="Dia da Semana",
-        yaxis_title="Número de Chamados",
-        xaxis=dict(
-            tickmode='array',
-            tickvals=[0, 1, 2, 3, 4, 5, 6],
-            ticktext=['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
-        )
-    )
-    st.plotly_chart(fig9)
+)
+st.plotly_chart(fig9)
 
-    # Função para limpar e converter a hora
-    def extrair_hora(valor):
-        try:
-            hora_limpa = valor.split(':')[0]  # Extrair apenas a hora
-            return int(hora_limpa)  # Converter para inteiro
-        except ValueError:
-            return None  # Retornar None se não for possível converter
+# Função para limpar e converter a hora
+def extrair_hora(valor):
+    try:
+        hora_limpa = valor.split(':')[0]  # Extrair apenas a hora
+        return int(hora_limpa)  # Converter para inteiro
+    except ValueError:
+        return None  # Retornar None se não for possível converter
 
-    # Aplicar a função para limpar e converter a hora
-    sedec_chamados['hora'] = sedec_chamados['solicitacao_hora'].apply(extrair_hora)
+# Filtrar os dados conforme o ano selecionado
+if ano_selecionado == 'All':
+    sedec_chamados_ano = sedec_chamados
+else:
+    sedec_chamados_ano = sedec_chamados[sedec_chamados['ano'] == int(ano_selecionado)]
 
-    # Remover linhas onde não foi possível converter a hora
-    sedec_chamados = sedec_chamados.dropna(subset=['hora'])
+# Aplicar a função para limpar e converter a hora
+sedec_chamados_ano['hora'] = sedec_chamados_ano['solicitacao_hora'].apply(extrair_hora)
 
-    # Criar DataFrame com todas as horas de 0 a 23 e inicializar a contagem em zero
-    todas_horas = pd.DataFrame({'hora': range(0, 24)})
+# Remover linhas onde não foi possível converter a hora
+sedec_chamados_ano = sedec_chamados_ano.dropna(subset=['hora'])
 
-    # Agrupar e contar os chamados por hora
-    chamados_por_hora = sedec_chamados.groupby('hora').size().reset_index(name='count')
+# Criar DataFrame com todas as horas de 0 a 23 e inicializar a contagem em zero
+todas_horas = pd.DataFrame({'hora': range(0, 24)})
 
-    # Mesclar com todas as horas para garantir que todas as horas estejam representadas
-    chamados_por_hora = todas_horas.merge(chamados_por_hora, on='hora', how='left')
+# Agrupar e contar os chamados por hora
+chamados_por_hora = sedec_chamados_ano.groupby('hora').size().reset_index(name='count')
 
-    # Preencher horas sem chamados com zero
-    chamados_por_hora['count'] = chamados_por_hora['count'].fillna(0)
+# Mesclar com todas as horas para garantir que todas as horas estejam representadas
+chamados_por_hora = todas_horas.merge(chamados_por_hora, on='hora', how='left')
 
-    # Ordenar as horas crescentemente
-    chamados_por_hora = chamados_por_hora.sort_values(by='hora')
+# Preencher horas sem chamados com zero
+chamados_por_hora['count'] = chamados_por_hora['count'].fillna(0)
 
-    # Streamlit - Adicionar um slider para seleção de horas
-    hora_minima = chamados_por_hora['hora'].min()
-    hora_maxima = chamados_por_hora['hora'].max()
+# Ordenar as horas crescentemente
+chamados_por_hora = chamados_por_hora.sort_values(by='hora')
 
-    hora_selecionada = st.slider('Selecione a Hora:', hora_minima, hora_maxima, (hora_minima, hora_maxima))
+# Streamlit - Adicionar um slider para seleção de horas
+hora_minima = chamados_por_hora['hora'].min()
+hora_maxima = chamados_por_hora['hora'].max()
 
-    # Filtrar o DataFrame baseado na seleção do usuário
-    chamados_filtrados = chamados_por_hora[(chamados_por_hora['hora'] >= hora_selecionada[0]) & 
-                                        (chamados_por_hora['hora'] <= hora_selecionada[1])]
+hora_selecionada = st.slider('Selecione a Hora:', hora_minima, hora_maxima, (hora_minima, hora_maxima))
 
-    # Criar o gráfico interativo com Plotly
-    fig10 = go.Figure(data=[
-        go.Bar(x=chamados_filtrados['hora'], y=chamados_filtrados['count'], 
-            marker=dict(color=chamados_filtrados['count'], colorscale='Viridis'))
-    ])
-    fig10.update_layout(
-        title="Distribuição de Chamados por Hora do Dia",
-        xaxis_title="Hora do Dia",
-        yaxis_title="Número de Chamados",
-        xaxis=dict(tickmode='linear')  # Configuração para garantir que todas as horas sejam exibidas
-    )
-    st.plotly_chart(fig10)
+# Filtrar o DataFrame baseado na seleção do usuário
+chamados_filtrados = chamados_por_hora[(chamados_por_hora['hora'] >= hora_selecionada[0]) & 
+                                    (chamados_por_hora['hora'] <= hora_selecionada[1])]
+
+# Criar o gráfico interativo com Plotly
+fig10 = go.Figure(data=[
+    go.Bar(x=chamados_filtrados['hora'], y=chamados_filtrados['count'], 
+        marker=dict(color=chamados_filtrados['count'], colorscale='Viridis'))
+])
+fig10.update_layout(
+    title="Distribuição de Chamados por Hora do Dia",
+    xaxis_title="Hora do Dia",
+    yaxis_title="Número de Chamados",
+    xaxis=dict(tickmode='linear')  # Configuração para garantir que todas as horas sejam exibidas
+)
+st.plotly_chart(fig10)
 
 # Calcular a média de todos os chamados
 media_total_chamados = sedec_chamados.groupby('ano').size().mean()
@@ -337,6 +305,3 @@ fig_proj.update_layout(
 
 # Exibir o gráfico no Streamlit
 st.plotly_chart(fig_proj, use_container_width=True)
-
-
-
